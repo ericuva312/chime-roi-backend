@@ -299,6 +299,8 @@ def send_roi_report_email(email, first_name, roi_data):
 def send_lead_notification_email(form_data, roi_data):
     """Send lead notification to Chime team"""
     try:
+        print(f"🔍 Debug: Starting lead notification email")
+        
         # Create lead scoring
         score = calculate_lead_score(form_data, roi_data)
         
@@ -361,16 +363,25 @@ def send_lead_notification_email(form_data, roi_data):
         </html>
         """
         
+        print(f"🔍 Debug: Sending lead notification to {len(recipient_emails)} recipients")
+        
         # Send to each recipient
+        all_success = True
         for recipient in recipient_emails:
             success = send_email_via_sendgrid(recipient, subject, html)
             if success:
                 print(f"✅ Lead notification email successfully sent to {recipient}")
             else:
                 print(f"❌ Failed to send lead notification email to {recipient}")
+                all_success = False
+        
+        return all_success
         
     except Exception as e:
         print(f"❌ Error sending lead notification: {str(e)}")
+        import traceback
+        print(f"❌ Full traceback: {traceback.format_exc()}")
+        return False
 
 def calculate_lead_score(form_data, roi_data):
     """Calculate lead score based on form data and ROI projections"""
@@ -409,9 +420,14 @@ def calculate_lead_score(form_data, roi_data):
 def submit_to_hubspot(form_data, roi_data):
     """Submit lead data to HubSpot"""
     try:
+        print(f"🔍 Debug: Starting HubSpot submission")
+        
         # HubSpot API configuration using environment variables
         hubspot_api_key = os.environ.get('HUBSPOT_API_KEY', '')
         hubspot_portal_id = os.environ.get('HUBSPOT_PORTAL_ID', '')
+        
+        print(f"🔍 Debug: HubSpot API key configured: {'Yes' if hubspot_api_key else 'No'}")
+        print(f"🔍 Debug: HubSpot Portal ID configured: {'Yes' if hubspot_portal_id else 'No'}")
         
         if not hubspot_api_key or not hubspot_portal_id:
             print("⚠️  HubSpot credentials not configured")
@@ -419,6 +435,8 @@ def submit_to_hubspot(form_data, roi_data):
         
         # Calculate lead score
         lead_score = calculate_lead_score(form_data, roi_data)
+        
+        print(f"🔍 Debug: Lead score calculated: {lead_score}")
         
         # Create/Update Contact in HubSpot
         contact_data = {
@@ -438,6 +456,8 @@ def submit_to_hubspot(form_data, roi_data):
             }
         }
         
+        print(f"🔍 Debug: Creating HubSpot contact for {form_data.get('email', '')}")
+        
         # Create contact
         contact_url = "https://api.hubapi.com/crm/v3/objects/contacts"
         contact_headers = {
@@ -447,6 +467,8 @@ def submit_to_hubspot(form_data, roi_data):
         
         contact_response = requests.post(contact_url, headers=contact_headers, json=contact_data)
         
+        print(f"🔍 Debug: HubSpot contact response status: {contact_response.status_code}")
+        
         if contact_response.status_code == 201:
             contact_id = contact_response.json().get('id')
             print(f"✅ HubSpot contact created: {contact_id}")
@@ -455,15 +477,18 @@ def submit_to_hubspot(form_data, roi_data):
             email = form_data.get('email', '')
             update_url = f"https://api.hubapi.com/crm/v3/objects/contacts/{email}?idProperty=email"
             update_response = requests.patch(update_url, headers=contact_headers, json=contact_data)
+            print(f"🔍 Debug: HubSpot contact update response status: {update_response.status_code}")
             if update_response.status_code == 200:
                 contact_id = update_response.json().get('id')
                 print(f"✅ HubSpot contact updated: {contact_id}")
             else:
-                print(f"❌ Failed to update HubSpot contact: {update_response.status_code}")
+                print(f"❌ Failed to update HubSpot contact: {update_response.status_code} - {update_response.text}")
                 return False
         else:
             print(f"❌ Failed to create HubSpot contact: {contact_response.status_code} - {contact_response.text}")
             return False
+        
+        print(f"🔍 Debug: Creating HubSpot deal")
         
         # Create Deal in HubSpot
         deal_data = {
@@ -490,6 +515,8 @@ def submit_to_hubspot(form_data, roi_data):
         deal_url = "https://api.hubapi.com/crm/v3/objects/deals"
         deal_response = requests.post(deal_url, headers=contact_headers, json=deal_data)
         
+        print(f"🔍 Debug: HubSpot deal response status: {deal_response.status_code}")
+        
         if deal_response.status_code == 201:
             deal_id = deal_response.json().get('id')
             print(f"✅ HubSpot deal created: {deal_id}")
@@ -501,4 +528,6 @@ def submit_to_hubspot(form_data, roi_data):
         
     except Exception as e:
         print(f"❌ Error submitting to HubSpot: {str(e)}")
+        import traceback
+        print(f"❌ Full traceback: {traceback.format_exc()}")
         return False
