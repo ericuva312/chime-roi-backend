@@ -433,3 +433,80 @@ def stripe_webhook():
         
     return jsonify({'status': 'success'})
 
+
+
+@payment_bp.route('/create-checkout-session', methods=['POST'])
+def create_checkout_session():
+    try:
+        data = request.get_json()
+        plan = data.get('plan', 'professional')
+        customer_name = data.get('name', 'Customer')
+        customer_email = data.get('email', 'customer@example.com')
+        customer_company = data.get('company', 'Company')
+        customer_website = data.get('website', 'https://example.com')
+        
+        # Plan pricing
+        plan_config = {
+            'growth': {'setup_fee': 2997, 'monthly_fee': 997, 'name': 'Growth Plan'},
+            'professional': {'setup_fee': 4997, 'monthly_fee': 1497, 'name': 'Professional Plan'},
+            'enterprise': {'setup_fee': 9997, 'monthly_fee': 2997, 'name': 'Enterprise Plan'}
+        }
+        
+        current_plan = plan_config.get(plan, plan_config['professional'])
+        
+        # Create or retrieve customer
+        customers = stripe.Customer.list(email=customer_email, limit=1)
+        if customers.data:
+            customer = customers.data[0]
+        else:
+            customer = stripe.Customer.create(
+                email=customer_email,
+                name=customer_name,
+                metadata={
+                    'company': customer_company,
+                    'website': customer_website,
+                    'plan': plan
+                }
+            )
+        
+        # Create checkout session
+        checkout_session = stripe.checkout.Session.create(
+            customer=customer.id,
+            payment_method_types=['card'],
+            line_items=[
+                {
+                    'price_data': {
+                        'currency': 'usd',
+                        'product_data': {
+                            'name': f"{current_plan['name']} - Setup Fee",
+                            'description': f"One-time setup fee for {current_plan['name']}"
+                        },
+                        'unit_amount': current_plan['setup_fee'] * 100,  # Convert to cents
+                    },
+                    'quantity': 1,
+                }
+            ],
+            mode='payment',
+            ui_mode='embedded',
+            return_url=request.host_url + 'payment-success?session_id={CHECKOUT_SESSION_ID}',
+            metadata={
+                'plan': plan,
+                'customer_name': customer_name,
+                'customer_email': customer_email,
+                'customer_company': customer_company,
+                'customer_website': customer_website,
+                'setup_fee': current_plan['setup_fee'],
+                'monthly_fee': current_plan['monthly_fee']
+            }
+        )
+        
+        return jsonify({
+            'client_secret': checkout_session.client_secret,
+            'customer_id': customer.id,
+            'plan_info': current_plan
+        })
+        
+    except Exception as e:
+        print(f"Error creating checkout session: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
