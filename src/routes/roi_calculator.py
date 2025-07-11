@@ -341,10 +341,218 @@ To unsubscribe, reply with "unsubscribe"
         return False
 
 def send_roi_report_email(email, first_name, roi_data, form_data=None):
-    """Send ROI report email using the existing template"""
-    # Use existing implementation from the original file
-    # This function remains unchanged for customer emails
-    pass
+    """
+    Send ROI report email to user with improved deliverability
+    Optimized to avoid spam filters while maintaining professional appearance
+    """
+    try:
+        print(f"🔍 DEBUG: Starting ROI email send to {email}")
+        
+        # Calculate additional metrics for the email with proper type conversion
+        try:
+            monthly_revenue = float(form_data.get('monthly_revenue', 0)) if form_data and form_data.get('monthly_revenue') else 0
+            monthly_orders = float(form_data.get('monthly_orders', 0)) if form_data and form_data.get('monthly_orders') else 0
+            average_order_value = float(form_data.get('average_order_value', 0)) if form_data and form_data.get('average_order_value') else 0
+            cart_abandonment_rate = float(form_data.get('cart_abandonment_rate', 70)) if form_data and form_data.get('cart_abandonment_rate') else 70
+            current_conversion_rate = float(form_data.get('current_conversion_rate', 2.5)) if form_data and form_data.get('current_conversion_rate') else 2.5
+        except (ValueError, TypeError) as e:
+            print(f"❌ ERROR: Type conversion failed: {e}")
+            # Use safe defaults
+            monthly_revenue = 0
+            monthly_orders = 0
+            average_order_value = 0
+            cart_abandonment_rate = 70
+            current_conversion_rate = 2.5
+            
+        business_category = form_data.get('business_category', 'E-commerce') if form_data else 'E-commerce'
+        company = form_data.get('company', 'Your Business') if form_data else 'Your Business'
+        hours_week_manual_tasks = form_data.get('hours_week_manual_tasks', '11-20') if form_data else '11-20'
+        
+        # Calculate derived metrics
+        monthly_increase = roi_data.get('monthly_increase', 0)
+        annual_increase = roi_data.get('annual_increase', 0)
+        recovered_orders = (cart_abandonment_rate / 100) * monthly_orders * 0.6  # 60% recovery rate
+        daily_loss = monthly_increase / 30 if monthly_increase > 0 else 0
+        weekly_loss = daily_loss * 7
+        
+        # Professional subject line (no promotional language)
+        subject = f"Revenue Analysis Results for {company}"
+        
+        # Create clean, professional HTML email template (minimal styling)
+        html_content = f\"\"\"<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Revenue Analysis Results - Chime</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; line-height: 1.6; color: #333333; background-color: #ffffff;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        
+        <!-- Header -->
+        <div style="text-align: center; padding: 20px 0; border-bottom: 2px solid #f0f0f0;">
+            <h1 style="margin: 0; color: #2c3e50; font-size: 24px;">Chime</h1>
+            <p style="margin: 5px 0 0; color: #7f8c8d; font-size: 14px;">Revenue Analysis Results</p>
+        </div>
+        
+        <!-- Main Content -->
+        <div style="padding: 30px 0;">
+            
+            <p style="margin: 0 0 20px; font-size: 16px;">Hi {first_name},</p>
+            
+            <p style="margin: 0 0 20px; font-size: 14px; line-height: 1.6;">
+                Thank you for completing the revenue analysis for <strong>{company}</strong>. Based on your current monthly revenue of <strong>${monthly_revenue:,}</strong> and {business_category} business model, we have identified growth opportunities for your business.
+            </p>
+            
+            <!-- Results Table -->
+            <div style="background: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 5px;">
+                <h3 style="margin: 0 0 15px; color: #2c3e50; font-size: 18px;">Analysis Results</h3>
+                
+                <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+                    <tr>
+                        <td style="padding: 8px; border-bottom: 1px solid #dee2e6; font-weight: bold;">Monthly Revenue Opportunity:</td>
+                        <td style="padding: 8px; border-bottom: 1px solid #dee2e6; text-align: right;">${monthly_increase:,.0f}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px; border-bottom: 1px solid #dee2e6; font-weight: bold;">Annual Growth Potential:</td>
+                        <td style="padding: 8px; border-bottom: 1px solid #dee2e6; text-align: right;">${annual_increase:,.0f}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px; border-bottom: 1px solid #dee2e6; font-weight: bold;">Recoverable Orders/Month:</td>
+                        <td style="padding: 8px; border-bottom: 1px solid #dee2e6; text-align: right;">{recovered_orders:.0f}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px; font-weight: bold;">Time Savings Potential:</td>
+                        <td style="padding: 8px; text-align: right;">20+ hours/week</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <!-- Business Metrics -->
+            <div style="margin: 25px 0;">
+                <h3 style="margin: 0 0 15px; color: #2c3e50; font-size: 16px;">Current Business Metrics</h3>
+                <p style="margin: 0 0 10px; font-size: 14px;">
+                    Your current conversion rate of {current_conversion_rate:.1f}% and cart abandonment rate of {cart_abandonment_rate:.0f}% indicate opportunities for optimization. You are currently spending {hours_week_manual_tasks} hours per week on manual tasks.
+                </p>
+                <p style="margin: 0 0 15px; font-size: 14px;">
+                    With {monthly_orders:.0f} monthly orders at an average order value of ${average_order_value:.0f}, there is potential to recover approximately {recovered_orders:.0f} orders monthly through optimization strategies.
+                </p>
+            </div>
+            
+            <!-- Next Steps -->
+            <div style="background: #e8f4f8; padding: 20px; margin: 20px 0; border-radius: 5px;">
+                <h3 style="margin: 0 0 15px; color: #2c3e50; font-size: 16px;">Recommended Next Steps</h3>
+                <p style="margin: 0 0 15px; font-size: 14px;">
+                    Based on your analysis results, we recommend scheduling a consultation to discuss implementation strategies for your business. Our team can provide detailed recommendations for optimizing your current operations.
+                </p>
+                <p style="margin: 0; font-size: 14px;">
+                    <a href="https://chimehq.co/#/contact" style="color: #3498db; text-decoration: none;">Schedule a consultation</a> or reply to this email to discuss your specific requirements.
+                </p>
+            </div>
+            
+            <!-- Contact Information -->
+            <div style="margin: 30px 0; padding-top: 20px; border-top: 1px solid #dee2e6;">
+                <p style="margin: 0 0 10px; font-size: 14px;">
+                    Thank you for your interest in Chime's business optimization solutions.
+                </p>
+                <p style="margin: 0; font-size: 14px;">
+                    Best regards,<br>
+                    The Chime Team
+                </p>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div style="text-align: center; padding: 20px 0; border-top: 1px solid #dee2e6; color: #7f8c8d; font-size: 12px;">
+            <p style="margin: 0 0 10px;">
+                Chime | Business Optimization Solutions<br>
+                <a href="mailto:hello@chimehq.co" style="color: #7f8c8d;">hello@chimehq.co</a> | 
+                <a href="https://chimehq.co" style="color: #7f8c8d;">chimehq.co</a>
+            </p>
+            <p style="margin: 0;">
+                <a href="#" style="color: #7f8c8d;">Unsubscribe</a> | 
+                <a href="https://chimehq.co/privacy" style="color: #7f8c8d;">Privacy Policy</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>\"\"\"
+
+        # Create plain text version for better deliverability
+        plain_text = f\"\"\"Hi {first_name},
+
+Thank you for completing the revenue analysis for {company}. Based on your current monthly revenue of ${monthly_revenue:,} and {business_category} business model, we have identified growth opportunities for your business.
+
+ANALYSIS RESULTS:
+- Monthly Revenue Opportunity: ${monthly_increase:,.0f}
+- Annual Growth Potential: ${annual_increase:,.0f}
+- Recoverable Orders/Month: {recovered_orders:.0f}
+- Time Savings Potential: 20+ hours/week
+
+CURRENT BUSINESS METRICS:
+Your current conversion rate of {current_conversion_rate:.1f}% and cart abandonment rate of {cart_abandonment_rate:.0f}% indicate opportunities for optimization. You are currently spending {hours_week_manual_tasks} hours per week on manual tasks.
+
+With {monthly_orders:.0f} monthly orders at an average order value of ${average_order_value:.0f}, there is potential to recover approximately {recovered_orders:.0f} orders monthly through optimization strategies.
+
+RECOMMENDED NEXT STEPS:
+Based on your analysis results, we recommend scheduling a consultation to discuss implementation strategies for your business. Our team can provide detailed recommendations for optimizing your current operations.
+
+Schedule a consultation at https://chimehq.co/#/contact or reply to this email to discuss your specific requirements.
+
+Thank you for your interest in Chime's business optimization solutions.
+
+Best regards,
+The Chime Team
+
+---
+Chime | Business Optimization Solutions
+hello@chimehq.co | chimehq.co
+
+Unsubscribe: [link]
+Privacy Policy: https://chimehq.co/privacy
+\"\"\"
+
+        # Configure SendGrid message with improved deliverability settings
+        message = Mail(
+            from_email=Email("hello@chimehq.co", "Chime Business Solutions"),
+            to_emails=To(email, first_name),
+            subject=subject,
+            html_content=html_content,
+            plain_text_content=plain_text
+        )
+        
+        # Optimize headers for deliverability
+        message.header = {
+            "X-Priority": "3",
+            "X-MSMail-Priority": "Normal",
+            "Importance": "Normal"
+        }
+        
+        # Disable tracking to reduce spam score
+        message.tracking_settings = TrackingSettings(
+            click_tracking=ClickTracking(enable=False),
+            open_tracking=OpenTracking(enable=False),
+            subscription_tracking=SubscriptionTracking(enable=False)
+        )
+        
+        # Simple categorization
+        message.categories = ["business-analysis"]
+        
+        # Set reply-to for better engagement
+        message.reply_to = ReplyTo(email="hello@chimehq.co", name="Chime Support")
+        
+        # Send the email
+        sg = SendGridAPIClient(api_key=os.environ.get('SENDGRID_API_KEY'))
+        response = sg.send(message)
+        
+        print(f"✅ ROI report email sent successfully to {email}")
+        print(f"🔍 Debug: SendGrid response status: {response.status_code}")
+        
+        return True
+        
+    except Exception as e:
+        print(f"❌ ERROR: Failed to send ROI report email to {email}: {str(e)}")
+        return False
 
 def send_lead_notification_email_improved(form_data, roi_data):
     """
