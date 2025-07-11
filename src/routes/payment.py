@@ -423,6 +423,91 @@ def stripe_webhook():
         payment_intent = event['data']['object']
         print(f"✅ Payment succeeded: {payment_intent['id']}")
         
+        # Extract customer data from metadata
+        metadata = payment_intent.get('metadata', {})
+        customer_email = metadata.get('customer_email')
+        customer_name = metadata.get('customer_name')
+        company = metadata.get('company')
+        plan_name = metadata.get('plan_name')
+        
+        if customer_email and customer_name and plan_name:
+            amount = payment_intent['amount'] / 100  # Convert from cents to dollars
+            
+            # Prepare customer data
+            customer_data = {
+                'email': customer_email,
+                'name': customer_name,
+                'company': company or 'N/A'
+            }
+            
+            # Send confirmation emails
+            try:
+                customer_email_sent = send_payment_confirmation_email(
+                    customer_email,
+                    customer_name,
+                    plan_name,
+                    amount,
+                    is_recurring=True
+                )
+                
+                notification_email_sent = send_payment_notification_email(
+                    customer_data,
+                    plan_name,
+                    amount,
+                    is_recurring=True
+                )
+                
+                print(f"✅ Payment emails sent - Customer: {customer_email_sent}, Admin: {notification_email_sent}")
+                
+            except Exception as e:
+                print(f"❌ Error sending payment emails: {str(e)}")
+        else:
+            print(f"❌ Missing customer data in payment metadata")
+        
+    elif event['type'] == 'checkout.session.completed':
+        session = event['data']['object']
+        print(f"✅ Checkout session completed: {session['id']}")
+        
+        # Extract customer data from session
+        customer_email = session.get('customer_email')
+        customer_name = session.get('customer_details', {}).get('name')
+        metadata = session.get('metadata', {})
+        
+        if customer_email and metadata:
+            plan_name = metadata.get('plan_name')
+            company = metadata.get('company')
+            amount = session.get('amount_total', 0) / 100  # Convert from cents to dollars
+            
+            if plan_name:
+                # Prepare customer data
+                customer_data = {
+                    'email': customer_email,
+                    'name': customer_name or 'Customer',
+                    'company': company or 'N/A'
+                }
+                
+                # Send confirmation emails
+                try:
+                    customer_email_sent = send_payment_confirmation_email(
+                        customer_email,
+                        customer_name or 'Customer',
+                        plan_name,
+                        amount,
+                        is_recurring=True
+                    )
+                    
+                    notification_email_sent = send_payment_notification_email(
+                        customer_data,
+                        plan_name,
+                        amount,
+                        is_recurring=True
+                    )
+                    
+                    print(f"✅ Checkout emails sent - Customer: {customer_email_sent}, Admin: {notification_email_sent}")
+                    
+                except Exception as e:
+                    print(f"❌ Error sending checkout emails: {str(e)}")
+        
     elif event['type'] == 'invoice.payment_succeeded':
         invoice = event['data']['object']
         print(f"✅ Subscription payment succeeded: {invoice['id']}")
