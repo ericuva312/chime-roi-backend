@@ -219,6 +219,10 @@ def send_email_via_sendgrid(to_email, subject, html_content, from_email="hello@c
         else:
             print(f"❌ SendGrid API error: {response.status_code} - {response.text}")
             return False
+            
+    except Exception as e:
+        print(f"❌ Error sending email via SendGrid: {str(e)}")
+        return False
 
 def send_email_via_sendgrid_improved(to_email, subject, html_content, first_name):
     """Send email via SendGrid with improved deliverability settings"""
