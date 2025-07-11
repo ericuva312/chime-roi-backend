@@ -328,6 +328,298 @@ To unsubscribe, reply with "unsubscribe"
         return False
 
 def send_roi_report_email(email, first_name, roi_data, form_data=None):
+    """
+    Send ROI report email using the new mobile-optimized template
+    """
+    try:
+        print(f"🔍 DEBUG: Starting ROI email send to {email}")
+        
+        # Calculate additional metrics for the email
+        monthly_revenue = form_data.get('monthly_revenue', 0) if form_data else 0
+        monthly_orders = form_data.get('monthly_orders', 0) if form_data else 0
+        average_order_value = form_data.get('average_order_value', 0) if form_data else 0
+        cart_abandonment_rate = form_data.get('cart_abandonment_rate', 70) if form_data else 70
+        current_conversion_rate = form_data.get('current_conversion_rate', 2.5) if form_data else 2.5
+        business_category = form_data.get('business_category', 'E-commerce') if form_data else 'E-commerce'
+        company = form_data.get('company', 'Your Business') if form_data else 'Your Business'
+        hours_week_manual_tasks = form_data.get('hours_week_manual_tasks', '11-20') if form_data else '11-20'
+        
+        # Calculate derived metrics
+        monthly_increase = roi_data.get('monthly_increase', 0)
+        annual_increase = roi_data.get('annual_increase', 0)
+        recovered_orders = (cart_abandonment_rate / 100) * monthly_orders * 0.6  # 60% recovery rate
+        daily_loss = monthly_increase / 30
+        weekly_loss = daily_loss * 7
+        
+        # Create the complete HTML email template
+        html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Revenue Growth Analysis - Chime</title>
+    <style>
+        @media only screen and (max-width: 600px) {{
+            .container {{ width: 100% !important; padding: 20px !important; }}
+            .header {{ padding: 20px !important; }}
+            .content {{ padding: 20px !important; }}
+            .metrics-grid {{ padding: 20px !important; }}
+            .metrics-card {{ margin: 10px 0 !important; }}
+            .metrics-value {{ font-size: 14px !important; }}
+            .metrics-label {{ font-size: 8px !important; }}
+            .section-padding {{ padding: 20px !important; margin: 20px 0 !important; }}
+            .cta-button {{ padding: 15px 25px !important; font-size: 16px !important; }}
+            h1 {{ font-size: 24px !important; }}
+            h2 {{ font-size: 18px !important; }}
+            h3 {{ font-size: 16px !important; }}
+        }}
+    </style>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #1a202c; background-color: #f7fafc;">
+    <div class="container" style="max-width: 650px; margin: 0 auto; background-color: #ffffff;">
+        
+        <!-- Header -->
+        <div class="header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px 40px 20px; color: white;">
+            <div style="text-align: center;">
+                <h1 style="margin: 0; color: white; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">Chime</h1>
+                <p style="margin: 8px 0 0; color: rgba(255,255,255,0.9); font-size: 16px; font-weight: 500;">Revenue Growth Analysis</p>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="content" style="padding: 40px;">
+            
+            <!-- Opening Section -->
+            <p style="margin: 0 0 20px; font-size: 18px; color: #1a202c; font-weight: 500;">Hi {first_name},</p>
+            
+            <p style="margin: 0 0 25px; font-size: 16px; line-height: 1.7; color: #2d3748;">
+                Thank you for completing the Revenue Growth Calculator for <strong style="color: #667eea;">{company}</strong>. Based on your current monthly revenue of <strong style="color: #667eea;">${monthly_revenue:,}</strong> and {business_category} business model, I've identified some significant opportunities that could transform your growth trajectory.
+            </p>
+            
+            <!-- Metrics Grid -->
+            <div class="metrics-grid" style="background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%); border-radius: 12px; padding: 25px; margin: 30px 0; border: 1px solid #e2e8f0;">
+                <h3 style="margin: 0 0 20px; color: #1a202c; font-size: 18px; font-weight: 700; text-align: center;">Your Projected Performance Improvements</h3>
+                
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="width: 50%; padding: 8px;">
+                            <div class="metrics-card" style="text-align: center; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                <div class="metrics-value" style="font-size: 18px; font-weight: 700; color: #667eea; margin-bottom: 4px; line-height: 1.1;">${monthly_increase:,.0f}</div>
+                                <div class="metrics-label" style="font-size: 9px; color: #4a5568; font-weight: 600; line-height: 1.2;">Monthly Revenue Increase</div>
+                            </div>
+                        </td>
+                        <td style="width: 50%; padding: 8px;">
+                            <div class="metrics-card" style="text-align: center; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                <div class="metrics-value" style="font-size: 18px; font-weight: 700; color: #48bb78; margin-bottom: 4px; line-height: 1.1;">${annual_increase:,.0f}</div>
+                                <div class="metrics-label" style="font-size: 9px; color: #4a5568; font-weight: 600; line-height: 1.2;">Annual Revenue Growth</div>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="width: 50%; padding: 8px;">
+                            <div class="metrics-card" style="text-align: center; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                <div class="metrics-value" style="font-size: 18px; font-weight: 700; color: #ed8936; margin-bottom: 4px; line-height: 1.1;">{recovered_orders:.0f}</div>
+                                <div class="metrics-label" style="font-size: 9px; color: #4a5568; font-weight: 600; line-height: 1.2;">Recovered Orders/Month</div>
+                            </div>
+                        </td>
+                        <td style="width: 50%; padding: 8px;">
+                            <div class="metrics-card" style="text-align: center; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                <div class="metrics-value" style="font-size: 18px; font-weight: 700; color: #9f7aea; margin-bottom: 4px; line-height: 1.1;">20+</div>
+                                <div class="metrics-label" style="font-size: 9px; color: #4a5568; font-weight: 600; line-height: 1.2;">Hours Saved Weekly</div>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            
+            <p style="margin: 25px 0; font-size: 16px; line-height: 1.7; color: #2d3748;">
+                Your biggest opportunity right now is your <strong style="color: #e53e3e;">{cart_abandonment_rate:.0f}% cart abandonment rate</strong> and <strong style="color: #e53e3e;">{current_conversion_rate:.1f}% conversion rate</strong> – both areas where we typically see immediate improvements. In this email, I'll show you exactly how to capture that lost revenue and the specific dollar impact for your business.
+            </p>
+            
+            <!-- Value Delivery Section -->
+            <div class="section-padding" style="background: linear-gradient(135deg, #ebf8ff 0%, #bee3f8 100%); border-left: 4px solid #667eea; padding: 30px; margin: 35px 0; border-radius: 0 12px 12px 0;">
+                <h2 style="margin: 0 0 25px; color: #1a202c; font-size: 22px; font-weight: 700;">Your Personalized Growth Analysis</h2>
+                
+                <div style="margin: 25px 0;">
+                    <h3 style="margin: 0 0 15px; color: #667eea; font-size: 18px; font-weight: 600;">💰 Revenue Recovery Opportunity</h3>
+                    <p style="margin: 0 0 15px; line-height: 1.7; color: #2d3748;">
+                        With {monthly_orders:.0f} monthly orders and a {cart_abandonment_rate:.0f}% abandonment rate, you're losing approximately <strong style="color: #667eea;">{recovered_orders:.0f} potential orders every month</strong>. At your current AOV of ${average_order_value:.0f}, that's <strong style="color: #667eea;">${monthly_increase:,.0f} in recoverable revenue monthly</strong> – or <strong style="color: #667eea;">${annual_increase:,.0f} annually</strong>.
+                    </p>
+                    <p style="margin: 0 0 20px; line-height: 1.7; color: #2d3748;">
+                        Industry benchmark for {business_category} businesses is 45-55% cart abandonment. Your current rate suggests immediate optimization opportunities that our AI typically improves within the first 30 days.
+                    </p>
+                </div>
+                
+                <div style="margin: 25px 0;">
+                    <h3 style="margin: 0 0 15px; color: #48bb78; font-size: 18px; font-weight: 600;">⚡ Automation Impact</h3>
+                    <p style="margin: 0 0 15px; line-height: 1.7; color: #2d3748;">
+                        You're currently spending <strong style="color: #48bb78;">{hours_week_manual_tasks} hours per week</strong> on manual tasks. Our AI automation typically saves 20+ hours weekly, allowing you to focus on strategic growth instead of operational tasks. That's equivalent to hiring a full-time employee without the overhead costs.
+                    </p>
+                    <p style="margin: 0 0 20px; line-height: 1.7; color: #2d3748;">
+                        Based on similar {business_category} businesses we've worked with, Chime delivers an average of <strong style="color: #48bb78;">188% revenue growth</strong> within the first 90 days through intelligent automation and conversion optimization.
+                    </p>
+                </div>
+                
+                <div style="margin: 25px 0;">
+                    <h3 style="margin: 0 0 15px; color: #9f7aea; font-size: 18px; font-weight: 600;">🎯 Your Competitive Edge</h3>
+                    <p style="margin: 0 0 15px; line-height: 1.7; color: #2d3748;">
+                        While your competitors are still manually managing their operations, implementing our AI-powered system positions you to capture market share through superior customer experience and operational efficiency. The businesses that automate first typically see 25-40% market share gains in their category.
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Social Proof Section -->
+            <div class="section-padding" style="background: linear-gradient(135deg, #f0fff4 0%, #c6f6d5 100%); border-left: 4px solid #48bb78; padding: 30px; margin: 35px 0; border-radius: 0 12px 12px 0;">
+                <h2 style="margin: 0 0 25px; color: #1a202c; font-size: 22px; font-weight: 700;">Success Stories from Similar Businesses</h2>
+                
+                <div style="margin: 25px 0; padding: 25px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    <h4 style="margin: 0 0 15px; color: #1a202c; font-size: 16px; font-weight: 600;">TechStyle Apparel - Fashion & Apparel</h4>
+                    <p style="margin: 0 0 15px; font-style: italic; color: #2d3748; line-height: 1.6; border-left: 3px solid #48bb78; padding-left: 15px;">
+                        "Chime's AI reduced our cart abandonment from 78% to 31% in just 3 weeks. Our monthly revenue jumped from $85K to $156K, and we're saving 28 hours per week on manual processes. The ROI was 340% in the first quarter."
+                    </p>
+                    <p style="margin: 0; font-weight: 600; color: #48bb78; font-size: 14px;">
+                        — Jennifer Walsh, Founder
+                    </p>
+                </div>
+                
+                <div style="margin: 25px 0; padding: 25px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    <h4 style="margin: 0 0 15px; color: #1a202c; font-size: 16px; font-weight: 600;">GrowthTech Solutions - Electronics & Technology</h4>
+                    <p style="margin: 0 0 15px; font-style: italic; color: #2d3748; line-height: 1.6; border-left: 3px solid #48bb78; padding-left: 15px;">
+                        "The 48-hour setup was seamless, and we saw results immediately. Our conversion rate improved from 2.1% to 4.8%, generating an additional $94K monthly. Chime's automation handles what used to take our team 35 hours weekly."
+                    </p>
+                    <p style="margin: 0; font-weight: 600; color: #48bb78; font-size: 14px;">
+                        — Alex Thompson, CEO
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Urgency & Scarcity Section -->
+            <div class="section-padding" style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1px solid #f59e0b; padding: 30px; margin: 35px 0; border-radius: 12px;">
+                <h2 style="margin: 0 0 20px; color: #92400e; font-size: 22px; font-weight: 700;">⏰ The Cost of Waiting</h2>
+                <p style="margin: 0 0 18px; color: #92400e; line-height: 1.7; font-size: 16px;">
+                    Every day you delay optimization, you're losing approximately <strong style="color: #d97706;">${daily_loss:,.0f} in recoverable revenue</strong>. That's <strong style="color: #d97706;">${weekly_loss:,.0f} per week</strong> walking out the door due to cart abandonment and conversion inefficiencies.
+                </p>
+                <p style="margin: 0; color: #92400e; line-height: 1.7; font-size: 16px;">
+                    Meanwhile, your automated competitors are capturing market share and customer loyalty. The businesses that implement AI-powered optimization first typically maintain a 6-12 month competitive advantage that becomes increasingly difficult for others to overcome.
+                </p>
+            </div>
+            
+            <!-- Call-to-Action Section -->
+            <div class="section-padding" style="background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%); padding: 35px; margin: 35px 0; border-radius: 12px; text-align: center; border: 2px solid #e2e8f0;">
+                <h2 style="margin: 0 0 25px; color: #1a202c; font-size: 24px; font-weight: 700;">Ready to Capture Your ${monthly_increase:,.0f}/Month Opportunity?</h2>
+                
+                <p style="margin: 0 0 30px; color: #2d3748; font-size: 16px; line-height: 1.7;">
+                    Let's discuss your specific growth strategy in a complimentary 30-minute consultation. I'll show you exactly how to implement our proven system for your business, with no obligation and complete transparency about costs and timeline.
+                </p>
+                
+                <div style="margin: 30px 0;">
+                    <a href="https://chimehq.co/#/contact" class="cta-button" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 18px 40px; border-radius: 8px; font-weight: 600; font-size: 18px; margin: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">Schedule Your Growth Strategy Call →</a>
+                </div>
+                
+                <p style="margin: 25px 0 0; color: #718096; font-size: 14px; line-height: 1.6;">
+                    Or reply to this email, and I'll personally reach out within 4 hours.<br>
+                    <a href="https://chimehq.co/#/contact" style="color: #667eea; text-decoration: none; font-weight: 500;">Click here to view available consultation times</a>
+                </p>
+            </div>
+            
+            <!-- Guarantee Section -->
+            <div style="background: linear-gradient(135deg, #ebf8ff 0%, #bee3f8 100%); border: 1px solid #3182ce; padding: 25px; margin: 30px 0; border-radius: 12px;">
+                <h3 style="margin: 0 0 20px; color: #1e4a72; font-size: 20px; font-weight: 700;">🛡️ Our Growth Guarantee</h3>
+                <ul style="margin: 0; padding-left: 25px; color: #1e4a72; line-height: 1.8; font-size: 15px;">
+                    <li style="margin-bottom: 8px;"><strong>15-25% revenue growth</strong> guaranteed within 90 days</li>
+                    <li style="margin-bottom: 8px;"><strong>48-hour setup</strong> with full data backup and rollback capabilities</li>
+                    <li style="margin-bottom: 8px;"><strong>30-day results timeline</strong> or full refund</li>
+                    <li style="margin-bottom: 8px;"><strong>SOC 2 certified</strong> enterprise-grade security</li>
+                    <li><strong>90-day money-back guarantee</strong> if you're not completely satisfied</li>
+                </ul>
+            </div>
+            
+            <!-- Closing -->
+            <div style="margin: 40px 0 25px; padding-top: 25px; border-top: 2px solid #e2e8f0;">
+                <p style="margin: 0 0 15px; color: #2d3748; line-height: 1.7; font-size: 16px;">
+                    Looking forward to helping you capture that ${monthly_increase:,.0f} monthly opportunity and transform your business operations.
+                </p>
+                <p style="margin: 0 0 10px; color: #2d3748; font-size: 16px;">Best regards,</p>
+                <p style="margin: 0; font-weight: 600; color: #1a202c; font-size: 16px;">The Chime Team</p>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div style="background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%); padding: 25px 40px; border-top: 2px solid #e2e8f0; text-align: center;">
+            <p style="margin: 0 0 15px; color: #4a5568; font-size: 14px; font-weight: 500;">
+                Chime | AI-Powered Revenue Growth Solutions<br>
+                <a href="mailto:hello@chimehq.co" style="color: #667eea; text-decoration: none; font-weight: 500;">hello@chimehq.co</a> | 
+                <a href="https://chimehq.co" style="color: #667eea; text-decoration: none; font-weight: 500;">chimehq.co</a>
+            </p>
+            <p style="margin: 0; color: #718096; font-size: 12px; line-height: 1.5;">
+                <a href="#" style="color: #718096; text-decoration: none;">Unsubscribe</a> | 
+                <a href="https://chimehq.co/privacy" style="color: #718096; text-decoration: none;">Privacy Policy</a> |
+                This email complies with CAN-SPAM regulations
+            </p>
+        </div>
+    </div>
+</body>
+</html>"""
+
+        # Create plain text version for better deliverability
+        plain_text = f"""Hi {first_name},
+
+Thank you for completing the Revenue Growth Calculator for {company}. Based on your current monthly revenue of ${monthly_revenue:,} and {business_category} business model, I've identified some significant opportunities that could transform your growth trajectory.
+
+YOUR PROJECTED PERFORMANCE IMPROVEMENTS:
+- Monthly Revenue Increase: ${monthly_increase:,.0f}
+- Annual Revenue Growth: ${annual_increase:,.0f}
+- Recovered Orders/Month: {recovered_orders:.0f}
+- Hours Saved Weekly: 20+
+
+Your biggest opportunity right now is your {cart_abandonment_rate:.0f}% cart abandonment rate and {current_conversion_rate:.1f}% conversion rate – both areas where we typically see immediate improvements.
+
+REVENUE RECOVERY OPPORTUNITY:
+With {monthly_orders:.0f} monthly orders and a {cart_abandonment_rate:.0f}% abandonment rate, you're losing approximately {recovered_orders:.0f} potential orders every month. At your current AOV of ${average_order_value:.0f}, that's ${monthly_increase:,.0f} in recoverable revenue monthly – or ${annual_increase:,.0f} annually.
+
+THE COST OF WAITING:
+Every day you delay optimization, you're losing approximately ${daily_loss:,.0f} in recoverable revenue. That's ${weekly_loss:,.0f} per week walking out the door due to cart abandonment and conversion inefficiencies.
+
+READY TO CAPTURE YOUR ${monthly_increase:,.0f}/MONTH OPPORTUNITY?
+Let's discuss your specific growth strategy in a complimentary 30-minute consultation. Schedule your call at: https://chimehq.co/#/contact
+
+OUR GROWTH GUARANTEE:
+- 15-25% revenue growth guaranteed within 90 days
+- 48-hour setup with full data backup and rollback capabilities
+- 30-day results timeline or full refund
+- SOC 2 certified enterprise-grade security
+- 90-day money-back guarantee if you're not completely satisfied
+
+Looking forward to helping you capture that ${monthly_increase:,.0f} monthly opportunity and transform your business operations.
+
+Best regards,
+The Chime Team
+
+Chime | AI-Powered Revenue Growth Solutions
+hello@chimehq.co | chimehq.co
+"""
+
+        # Create subject line with personalization
+        subject = f"{first_name}, your ${monthly_increase:,.0f}/month revenue opportunity analysis is ready"
+        
+        # Send email using improved SendGrid function
+        success = send_email_via_sendgrid_improved(
+            to_email=email,
+            subject=subject,
+            html_content=html_content,
+            plain_text=plain_text,
+            from_email="hello@chimehq.co",
+            from_name="Chime Team"
+        )
+        
+        print(f"🔍 DEBUG: ROI email send result: {success}")
+        return success
+        
+    except Exception as e:
+        print(f"❌ ERROR in send_roi_report_email: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return False
     """Send ROI report email to user with improved deliverability"""
     try:
         print(f"🔍 Debug: Starting ROI report email for {email}")
