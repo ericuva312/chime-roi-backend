@@ -343,7 +343,7 @@ To unsubscribe, reply with "unsubscribe"
 def send_roi_report_email(email, first_name, roi_data, form_data=None):
     """
     Send ROI report email to user with improved deliverability
-    Uses existing SendGrid infrastructure
+    Optimized to avoid spam filters while maintaining professional appearance
     """
     try:
         print(f"🔍 DEBUG: Starting ROI email send to {email}")
@@ -372,12 +372,14 @@ def send_roi_report_email(email, first_name, roi_data, form_data=None):
         monthly_increase = roi_data.get('monthly_increase', 0)
         annual_increase = roi_data.get('annual_increase', 0)
         recovered_orders = (cart_abandonment_rate / 100) * monthly_orders * 0.6  # 60% recovery rate
+        daily_loss = monthly_increase / 30 if monthly_increase > 0 else 0
+        weekly_loss = daily_loss * 7
         
         # Professional subject line (no promotional language)
         subject = f"Revenue Analysis Results for {company}"
         
         # Create clean, professional HTML email template (minimal styling)
-        html_content = f"""<!DOCTYPE html>
+        html_content = f\"\"\"<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -474,18 +476,79 @@ def send_roi_report_email(email, first_name, roi_data, form_data=None):
         </div>
     </div>
 </body>
-</html>"""
+</html>\"\"\"
+
+        # Create plain text version for better deliverability
+        plain_text = f\"\"\"Hi {first_name},
+
+Thank you for completing the revenue analysis for {company}. Based on your current monthly revenue of ${monthly_revenue:,} and {business_category} business model, we have identified growth opportunities for your business.
+
+ANALYSIS RESULTS:
+- Monthly Revenue Opportunity: ${monthly_increase:,.0f}
+- Annual Growth Potential: ${annual_increase:,.0f}
+- Recoverable Orders/Month: {recovered_orders:.0f}
+- Time Savings Potential: 20+ hours/week
+
+CURRENT BUSINESS METRICS:
+Your current conversion rate of {current_conversion_rate:.1f}% and cart abandonment rate of {cart_abandonment_rate:.0f}% indicate opportunities for optimization. You are currently spending {hours_week_manual_tasks} hours per week on manual tasks.
+
+With {monthly_orders:.0f} monthly orders at an average order value of ${average_order_value:.0f}, there is potential to recover approximately {recovered_orders:.0f} orders monthly through optimization strategies.
+
+RECOMMENDED NEXT STEPS:
+Based on your analysis results, we recommend scheduling a consultation to discuss implementation strategies for your business. Our team can provide detailed recommendations for optimizing your current operations.
+
+Schedule a consultation at https://chimehq.co/#/contact or reply to this email to discuss your specific requirements.
+
+Thank you for your interest in Chime's business optimization solutions.
+
+Best regards,
+The Chime Team
+
+---
+Chime | Business Optimization Solutions
+hello@chimehq.co | chimehq.co
+
+Unsubscribe: [link]
+Privacy Policy: https://chimehq.co/privacy
+\"\"\"
+
+        # Configure SendGrid message with improved deliverability settings
+        message = Mail(
+            from_email=Email("hello@chimehq.co", "Chime Business Solutions"),
+            to_emails=To(email, first_name),
+            subject=subject,
+            html_content=html_content,
+            plain_text_content=plain_text
+        )
         
-        # Use existing SendGrid function
-        print(f"🔍 Debug: Calling send_email_via_sendgrid_improved for user ROI report")
-        success = send_email_via_sendgrid_improved(email, subject, html_content, first_name)
+        # Optimize headers for deliverability
+        message.header = {
+            "X-Priority": "3",
+            "X-MSMail-Priority": "Normal",
+            "Importance": "Normal"
+        }
         
-        if success:
-            print(f"✅ ROI report email sent successfully to {email}")
-        else:
-            print(f"❌ Failed to send ROI report email to {email}")
-            
-        return success
+        # Disable tracking to reduce spam score
+        message.tracking_settings = TrackingSettings(
+            click_tracking=ClickTracking(enable=False),
+            open_tracking=OpenTracking(enable=False),
+            subscription_tracking=SubscriptionTracking(enable=False)
+        )
+        
+        # Simple categorization
+        message.categories = ["business-analysis"]
+        
+        # Set reply-to for better engagement
+        message.reply_to = ReplyTo(email="hello@chimehq.co", name="Chime Support")
+        
+        # Send the email
+        sg = SendGridAPIClient(api_key=os.environ.get('SENDGRID_API_KEY'))
+        response = sg.send(message)
+        
+        print(f"✅ ROI report email sent successfully to {email}")
+        print(f"🔍 Debug: SendGrid response status: {response.status_code}")
+        
+        return True
         
     except Exception as e:
         print(f"❌ ERROR: Failed to send ROI report email to {email}: {str(e)}")
